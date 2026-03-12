@@ -7,7 +7,7 @@ const QUESTS_DATA = [
   { 
     id: 'main_quest', 
     title: 'Main Quest: O Despertar', 
-    time: '04h00', 
+    time: '04h00 - 04h15', 
     xp: 50, 
     icon: <Zap className="w-5 h-5" />,
     color: 'text-yellow-400',
@@ -15,7 +15,8 @@ const QUESTS_DATA = [
   },
   { 
     id: 'side_quest', 
-    title: 'Side Quest: Devocional/Leitura', 
+    title: 'Side Quest: RD - Reservatório de Dopamina', 
+    time: '05h00 - 06h00',
     xp: 30, 
     icon: <Terminal className="w-5 h-5" />,
     color: 'text-cyan-400',
@@ -23,8 +24,9 @@ const QUESTS_DATA = [
   },
   { 
     id: 'daily_task', 
-    title: 'Daily Task: Trajeto Blindado', 
-    xp: 20, 
+    title: 'Daily Task: Devocional e Leitura', 
+    time: '04h30 - 05h00',
+    xp: 30, 
     icon: <Shield className="w-5 h-5" />,
     color: 'text-emerald-400',
     borderColor: 'border-emerald-400/30'
@@ -33,8 +35,8 @@ const QUESTS_DATA = [
 
 const BOSS_FIGHT = {
   id: 'boss_fight',
-  title: 'BOSS FIGHT: Zona de Emboscada',
-  time: '18h00 - 20h30',
+  title: 'BOSS FIGHT: Curso.dev',
+  time: '19h00 - 23h00',
   xp: 100,
   icon: <Skull className="w-6 h-6" />,
   color: 'text-red-500',
