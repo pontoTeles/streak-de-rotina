@@ -5,48 +5,70 @@ import Confetti from 'react-confetti';
 // --- CONFIGURAÇÃO DAS MISSÕES ---
 const QUESTS_DATA = [
   { 
-    id: 'main_quest', 
-    title: 'Main Quest: O Despertar', 
+    id: 'main_quest_1', 
+    title: 'Pilar 1: O Despertar', 
     time: '04h00', 
-    xp: 50, 
+    xp: 30, 
     icon: <Zap className="w-5 h-5" />,
     color: 'text-yellow-400',
     borderColor: 'border-yellow-400/30'
   },
   { 
-    id: 'side_quest', 
-    title: 'Side Quest: Devocional/Leitura', 
+    id: 'main_quest_2', 
+    title: 'Pilar 2: RD - Reservatório de Dopamina', 
+    time: '04h00', 
+    xp: 30, 
+    icon: <Zap className="w-5 h-5" />,
+    color: 'text-yellow-400',
+    borderColor: 'border-yellow-400/30'
+  },
+  { 
+    id: 'side_quest_1', 
+    title: 'Pilar 2: Devocional e Leitura', 
     xp: 30, 
     icon: <Terminal className="w-5 h-5" />,
     color: 'text-cyan-400',
     borderColor: 'border-cyan-400/30'
   },
   { 
-    id: 'daily_task', 
-    title: 'Daily Task: Trajeto Blindado', 
-    xp: 20, 
+    id: 'daily_task_1', 
+    title: 'Pilar 3: Devocional e Leitura', 
+    xp: 30, 
     icon: <Shield className="w-5 h-5" />,
     color: 'text-emerald-400',
     borderColor: 'border-emerald-400/30'
   },
 ];
 
-const BOSS_FIGHT = {
-  id: 'boss_fight',
-  title: 'BOSS FIGHT: Zona de Emboscada',
-  time: '18h00 - 20h30',
-  xp: 100,
-  icon: <Skull className="w-6 h-6" />,
-  color: 'text-red-500',
-  borderColor: 'border-red-500/50'
-};
+// MUDANÇA 1: Transformamos o BOSS_FIGHT em um Array (BOSS_FIGHTS)
+const BOSS_FIGHTS = [
+  {
+    id: 'boss_fight_1',
+    title: 'BOSS FIGHT 1: Curso.dev',
+    time: '19h00 - 23h00',
+    xp: 100,
+    icon: <Skull className="w-6 h-6" />,
+    color: 'text-red-500',
+    borderColor: 'border-red-500/50'
+  },
+  {
+    id: 'boss_fight_2',
+    title: 'BOSS FIGHT 2: +1 dia | +1%',
+    time: '04h00 - 23h00',
+    xp: 150,
+    icon: <Skull className="w-6 h-6" />,
+    color: 'text-purple-500', // Cores diferentes pro segundo boss!
+    borderColor: 'border-purple-500/50'
+  }
+];
 
 const LogbookRPG = () => {
   // --- ESTADOS ---
   const [xp, setXp] = useState(0);
   const [streak, setStreak] = useState(0);
   const [completedQuests, setCompletedQuests] = useState({});
-  const [bossObjective, setBossObjective] = useState('');
+  // MUDANÇA 2: bossObjectives agora é um objeto {} para guardar textos separados
+  const [bossObjectives, setBossObjectives] = useState({});
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
@@ -58,15 +80,15 @@ const LogbookRPG = () => {
       setXp(parsed.xp || 0);
       setStreak(parsed.streak || 0);
       setCompletedQuests(parsed.completedQuests || {});
-      setBossObjective(parsed.bossObjective || '');
+      setBossObjectives(parsed.bossObjectives || {});
     }
   }, []);
 
   // --- PERSISTÊNCIA (Save) ---
   useEffect(() => {
-    const dataToSave = { xp, streak, completedQuests, bossObjective };
+    const dataToSave = { xp, streak, completedQuests, bossObjectives };
     localStorage.setItem('logbook_rpg_data', JSON.stringify(dataToSave));
-  }, [xp, streak, completedQuests, bossObjective]);
+  }, [xp, streak, completedQuests, bossObjectives]);
 
   // --- REDIMENSIONAMENTO PARA CONFETES ---
   useEffect(() => {
@@ -80,61 +102,68 @@ const LogbookRPG = () => {
   const toggleQuest = (questId, questXp) => {
     const isCompleted = !!completedQuests[questId];
     
-    // Atualiza estado da quest
-    setCompletedQuests(prev => ({
-      ...prev,
-      [questId]: !isCompleted
-    }));
-
-    // Atualiza XP (Soma ou Subtrai)
+    setCompletedQuests(prev => ({ ...prev, [questId]: !isCompleted }));
     setXp(prev => isCompleted ? prev - questXp : prev + questXp);
   };
 
-  const handleBossFight = () => {
-    // Validação: Objetivo deve estar preenchido
-    if (!bossObjective.trim()) {
-      alert("⚠️ ERRO DE COMPILAÇÃO: Defina o objetivo da luta antes de engajar o Boss!");
+  // MUDANÇA 3: Atualiza o texto apenas do Boss específico
+  const handleObjectiveChange = (bossId, text) => {
+    setBossObjectives(prev => ({
+      ...prev,
+      [bossId]: text
+    }));
+  };
+
+  // MUDANÇA 4: O handleBossFight agora recebe o Boss inteiro como parâmetro
+  const handleBossFight = (boss) => {
+    const currentObjective = bossObjectives[boss.id] || '';
+
+    if (!currentObjective.trim()) {
+      alert(`⚠️ ERRO DE COMPILAÇÃO: Defina o objetivo da luta antes de engajar o ${boss.title}!`);
       return;
     }
 
-    const isCompleted = !!completedQuests[BOSS_FIGHT.id];
+    const isCompleted = !!completedQuests[boss.id];
     
     if (!isCompleted) {
-      // Completando o Boss
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 5000); // Confetes por 5s
-      setXp(prev => prev + BOSS_FIGHT.xp);
+      setTimeout(() => setShowConfetti(false), 5000);
+      setXp(prev => prev + boss.xp);
     } else {
-      // Desmarcando o Boss
-      setXp(prev => prev - BOSS_FIGHT.xp);
+      setXp(prev => prev - boss.xp);
     }
 
-    setCompletedQuests(prev => ({
-      ...prev,
-      [BOSS_FIGHT.id]: !isCompleted
-    }));
+    setCompletedQuests(prev => ({ ...prev, [boss.id]: !isCompleted }));
   };
 
   const resetDailyProgress = () => {
     if (window.confirm("Reiniciar ciclo diário? O XP total e o Streak serão mantidos.")) {
       setCompletedQuests({});
-      setBossObjective('');
+      setBossObjectives({});
     }
   };
 
   const incrementStreak = () => setStreak(s => s + 1);
   const resetStreak = () => setStreak(0);
 
-  // Cálculos de Progresso Visual
-  const totalDailyXpPossivel = QUESTS_DATA.reduce((acc, q) => acc + q.xp, 0) + BOSS_FIGHT.xp;
+  // MUDANÇA 5: O cálculo de XP Máximo Diário soma o XP de TODOS os Bosses
+  const totalDailyXpPossivel = 
+    QUESTS_DATA.reduce((acc, q) => acc + q.xp, 0) + 
+    BOSS_FIGHTS.reduce((acc, b) => acc + b.xp, 0);
+
+  // MUDANÇA 6: O cálculo de XP Atual encontra o XP da Quest ou do Boss correto
   const currentDailyXp = Object.keys(completedQuests).reduce((acc, key) => {
-    if (key === BOSS_FIGHT.id) return acc + BOSS_FIGHT.xp;
     const quest = QUESTS_DATA.find(q => q.id === key);
-    return quest ? acc + quest.xp : acc;
+    if (quest) return acc + quest.xp;
+    
+    const boss = BOSS_FIGHTS.find(b => b.id === key);
+    if (boss) return acc + boss.xp;
+    
+    return acc;
   }, 0);
   
   const progressPercentage = Math.min((currentDailyXp / totalDailyXpPossivel) * 100, 100);
-  const level = Math.floor(xp / 1000) + 1; // Nível sobe a cada 1000 XP
+  const level = Math.floor(xp / 1000) + 1;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-mono selection:bg-green-500 selection:text-black p-4 md:p-8">
@@ -146,7 +175,7 @@ const LogbookRPG = () => {
         <header className="border-b-2 border-slate-800 pb-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-500">
-              DEV_LOGBOOK_v1.0
+              DEV_LOGBOOK_v2.0
             </h1>
             <p className="text-slate-500 text-sm mt-1 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
@@ -169,7 +198,6 @@ const LogbookRPG = () => {
 
         {/* --- STREAK & PROGRESS --- */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Streak Control */}
           <div className="col-span-1 bg-slate-900/50 p-4 rounded border border-slate-800 flex flex-col justify-between">
             <div className="flex justify-between items-start mb-2">
               <span className="text-xs text-slate-400 uppercase">Streak (Dias sem bugs)</span>
@@ -189,7 +217,6 @@ const LogbookRPG = () => {
             </div>
           </div>
 
-          {/* Daily Progress Bar */}
           <div className="col-span-1 md:col-span-2 bg-slate-900/50 p-4 rounded border border-slate-800 flex flex-col justify-center">
             <div className="flex justify-between mb-2 text-xs uppercase tracking-wider text-slate-400">
               <span>Carregamento do Sistema Diário</span>
@@ -200,7 +227,6 @@ const LogbookRPG = () => {
                 className="h-full bg-gradient-to-r from-cyan-500 to-green-500 transition-all duration-700 ease-out"
                 style={{ width: `${progressPercentage}%` }}
               >
-                {/* Glitch Effect Overlay */}
                 <div className="absolute inset-0 bg-white/10 w-full h-full animate-[pulse_2s_ease-in-out_infinite]"></div>
               </div>
             </div>
@@ -255,59 +281,61 @@ const LogbookRPG = () => {
               </div>
             ))}
 
-            {/* --- BOSS FIGHT (Special UI) --- */}
-            <div className={`
-              mt-8 p-1 rounded-xl bg-gradient-to-r from-red-900/20 via-slate-900 to-red-900/20
-              ${completedQuests[BOSS_FIGHT.id] ? 'opacity-50 grayscale' : 'animate-[pulse_4s_ease-in-out_infinite]'}
-            `}>
-              <div className="bg-slate-950 p-6 rounded-lg border border-red-900/50 relative overflow-hidden">
-                {/* Background Grid Effect */}
-                <div className="absolute inset-0 opacity-10 pointer-events-none" 
-                     style={{ backgroundImage: 'radial-gradient(circle, #333 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
-                </div>
-
-                <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-red-500/10 rounded-full border border-red-500/50 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)]">
-                      {BOSS_FIGHT.icon}
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-red-500 tracking-wider flex items-center gap-2">
-                        {BOSS_FIGHT.title}
-                        {!completedQuests[BOSS_FIGHT.id] && <span className="flex h-3 w-3 relative">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                        </span>}
-                      </h3>
-                      <p className="text-red-400/60 text-sm font-mono mt-1">{BOSS_FIGHT.time}</p>
-                    </div>
+            {/* MUDANÇA 7: Renderiza a lista de Bosses usando o .map */}
+            {BOSS_FIGHTS.map((boss) => (
+              <div key={boss.id} className={`
+                mt-8 p-1 rounded-xl bg-gradient-to-r from-${boss.color.split('-')[1]}-900/20 via-slate-900 to-${boss.color.split('-')[1]}-900/20
+                ${completedQuests[boss.id] ? 'opacity-50 grayscale' : 'animate-[pulse_4s_ease-in-out_infinite]'}
+              `}>
+                <div className={`bg-slate-950 p-6 rounded-lg border border-${boss.color.split('-')[1]}-900/50 relative overflow-hidden`}>
+                  
+                  <div className="absolute inset-0 opacity-10 pointer-events-none" 
+                      style={{ backgroundImage: 'radial-gradient(circle, #333 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
                   </div>
 
-                  <div className="flex-1 w-full md:w-auto flex flex-col md:flex-row items-end gap-3">
-                    <input 
-                      type="text" 
-                      placeholder="Objetivo da Luta (Ex: Finalizar API)" 
-                      value={bossObjective}
-                      onChange={(e) => setBossObjective(e.target.value)}
-                      disabled={completedQuests[BOSS_FIGHT.id]}
-                      className="w-full bg-slate-900 border border-red-900/50 rounded px-4 py-2 text-red-100 placeholder-red-900/50 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all font-mono text-sm"
-                    />
-                    
-                    <button 
-                      onClick={handleBossFight}
-                      className={`
-                        whitespace-nowrap px-6 py-2 rounded font-bold uppercase tracking-wider text-sm border transition-all
-                        ${completedQuests[BOSS_FIGHT.id] 
-                          ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed' 
-                          : 'bg-red-600 hover:bg-red-500 text-black border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.5)] hover:shadow-[0_0_25px_rgba(220,38,38,0.8)]'}
-                      `}
-                    >
-                      {completedQuests[BOSS_FIGHT.id] ? 'Boss Derrotado' : 'Engajar (+100 XP)'}
-                    </button>
+                  <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 bg-${boss.color.split('-')[1]}-500/10 rounded-full border border-${boss.color.split('-')[1]}-500/50 ${boss.color} shadow-[0_0_20px_rgba(var(--tw-colors-${boss.color.split('-')[1]}-500),0.3)]`}>
+                        {boss.icon}
+                      </div>
+                      <div>
+                        <h3 className={`text-xl font-bold ${boss.color} tracking-wider flex items-center gap-2`}>
+                          {boss.title}
+                          {!completedQuests[boss.id] && <span className="flex h-3 w-3 relative">
+                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-${boss.color.split('-')[1]}-400 opacity-75`}></span>
+                            <span className={`relative inline-flex rounded-full h-3 w-3 bg-${boss.color.split('-')[1]}-500`}></span>
+                          </span>}
+                        </h3>
+                        <p className={`text-${boss.color.split('-')[1]}-400/60 text-sm font-mono mt-1`}>{boss.time}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 w-full md:w-auto flex flex-col md:flex-row items-end gap-3">
+                      <input 
+                        type="text" 
+                        placeholder={`Objetivo (Ex: Finalizar ${boss.title})`}
+                        value={bossObjectives[boss.id] || ''}
+                        onChange={(e) => handleObjectiveChange(boss.id, e.target.value)}
+                        disabled={completedQuests[boss.id]}
+                        className={`w-full bg-slate-900 border border-${boss.color.split('-')[1]}-900/50 rounded px-4 py-2 text-${boss.color.split('-')[1]}-100 placeholder-${boss.color.split('-')[1]}-900/50 focus:outline-none focus:border-${boss.color.split('-')[1]}-500 focus:ring-1 focus:ring-${boss.color.split('-')[1]}-500 transition-all font-mono text-sm`}
+                      />
+                      
+                      <button 
+                        onClick={() => handleBossFight(boss)}
+                        className={`
+                          whitespace-nowrap px-6 py-2 rounded font-bold uppercase tracking-wider text-sm border transition-all
+                          ${completedQuests[boss.id] 
+                            ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed' 
+                            : `bg-${boss.color.split('-')[1]}-600 hover:bg-${boss.color.split('-')[1]}-500 text-black border-${boss.color.split('-')[1]}-500 shadow-[0_0_15px_rgba(var(--tw-colors-${boss.color.split('-')[1]}-600),0.5)] hover:shadow-[0_0_25px_rgba(var(--tw-colors-${boss.color.split('-')[1]}-600),0.8)]`}
+                        `}
+                      >
+                        {completedQuests[boss.id] ? 'Boss Derrotado' : `Engajar (+${boss.xp} XP)`}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         </main>
 
