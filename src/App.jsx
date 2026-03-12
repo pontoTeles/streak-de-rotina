@@ -148,7 +148,7 @@ const LogbookRPG = () => {
         <header className="border-b-2 border-slate-800 pb-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-500">
-              DEV_LOGBOOK_v1.0
+              LOGBOOK RPG
             </h1>
             <p className="text-slate-500 text-sm mt-1 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
