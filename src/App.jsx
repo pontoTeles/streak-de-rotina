@@ -51,6 +51,46 @@ const LogbookRPG = () => {
   const [bossObjective, setBossObjective] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [secondsLeft, setSecondsLeft] = useState(25 * 60);
+  const [timerActive, setTimerActive] = useState(false);
+  const [mode, setMode] = useState('focus');
+
+  const totalDailyXpPossivel = QUESTS_DATA.reduce((acc, q) => acc + q.xp, 0) + BOSS_FIGHT.xp;
+  
+  const currentDailyXp = Object.keys(completedQuests).reduce((acc, key) => {
+    if (key === BOSS_FIGHT.id) return acc + BOSS_FIGHT.xp;
+    const quest = QUESTS_DATA.find(q => q.id === key);
+    return quest ? acc + quest.xp : acc;
+  }, 0);
+
+  // 2. DEPOIS: Efeitos que dependem do currentDailyXp
+  useEffect(() => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const history = JSON.parse(localStorage.getItem('rpg_history') || '{}');
+    
+    // Só atualiza se o XP atual for maior que o já registrado (ou se não houver registro)
+    if (currentDailyXp !== history[dateStr]) {
+      history[dateStr] = currentDailyXp;
+      localStorage.setItem('rpg_history', JSON.stringify(history));
+    }
+  }, [currentDailyXp]);
+
+  // 3. RESTANTE DOS EFEITOS (Timer, Persistência, etc)
+  useEffect(() => {
+    let interval = null;
+    if (timerActive && secondsLeft > 0) {
+      interval = setInterval(() => {
+        setSecondsLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (secondsLeft === 0) {
+      setTimerActive(false);
+      alert(mode === 'focus' ? "🚨 FOCO ENCERRADO! Hora do descanso." : "🔋 DESCANSO TERMINOU! De volta ao trabalho.");
+      const nextMode = mode === 'focus' ? 'break' : 'focus';
+      setMode(nextMode);
+      setSecondsLeft(nextMode === 'focus' ? 25 * 60 : 5 * 60);
+    }
+    return () => clearInterval(interval);
+  }, [timerActive, secondsLeft, mode]);
 
   // --- PERSISTÊNCIA (Load) ---
   useEffect(() => {
@@ -76,6 +116,37 @@ const LogbookRPG = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+  let interval = null;
+  if (timerActive && secondsLeft > 0) {
+    interval = setInterval(() => {
+      setSecondsLeft((prev) => prev - 1);
+    }, 1000);
+  } else if (secondsLeft === 0) {
+    setTimerActive(false);
+    alert(mode === 'focus' ? "🚨 FOCO ENCERRADO! Hora do descanso." : "🔋 DESCANSO TERMINOU! De volta ao trabalho.");
+    // Auto-switch de modo
+    const nextMode = mode === 'focus' ? 'break' : 'focus';
+    setMode(nextMode);
+    setSecondsLeft(nextMode === 'focus' ? 25 * 60 : 5 * 60);
+  }
+
+    return () => clearInterval(interval);
+
+  }, [timerActive, secondsLeft, mode]);
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const toggleTimer = () => setTimerActive(!timerActive);
+  const resetTimer = () => {
+    setTimerActive(false);
+    setSecondsLeft(mode === 'focus' ? 25 * 60 : 5 * 60);
+  };
 
   // --- LÓGICA DE NEGÓCIO ---
 
@@ -126,17 +197,28 @@ const LogbookRPG = () => {
 
   const incrementStreak = () => setStreak(s => s + 1);
   const resetStreak = () => setStreak(0);
-
-  // Cálculos de Progresso Visual
-  const totalDailyXpPossivel = QUESTS_DATA.reduce((acc, q) => acc + q.xp, 0) + BOSS_FIGHT.xp;
-  const currentDailyXp = Object.keys(completedQuests).reduce((acc, key) => {
-    if (key === BOSS_FIGHT.id) return acc + BOSS_FIGHT.xp;
-    const quest = QUESTS_DATA.find(q => q.id === key);
-    return quest ? acc + quest.xp : acc;
-  }, 0);
   
   const progressPercentage = Math.min((currentDailyXp / totalDailyXpPossivel) * 100, 100);
   const level = Math.floor(xp / 1000) + 1; // Nível sobe a cada 1000 XP
+
+  const getHeatmapData = () => {
+    const data = [];
+    const today = new Date();
+    const history = JSON.parse(localStorage.getItem('rpg_history') || '{}');
+
+    // Gera dados para as últimas 12 semanas (84 dias)
+    for (let i = 83; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      
+      data.push({
+        date: dateStr,
+        count: history[dateStr] || 0 // Pega o XP salvo ou 0
+      });
+    }
+    return data;
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-mono selection:bg-green-500 selection:text-black p-4 md:p-8">
@@ -209,6 +291,45 @@ const LogbookRPG = () => {
             <p className="text-right text-xs text-slate-600 mt-2">
               {currentDailyXp} / {totalDailyXpPossivel} XP Diários
             </p>
+          </div>
+        </section>
+
+        <section className="bg-slate-900 border border-cyan-500/30 p-6 rounded-lg mb-8 shadow-[0_0_20px_rgba(6,182,212,0.1)]">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-full ${mode === 'focus' ? 'bg-cyan-500/10 text-cyan-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                <RefreshCw className={`w-6 h-6 ${timerActive ? 'animate-spin' : ''}`} />
+              </div>
+              <div>
+                <h3 className="text-sm uppercase tracking-widest text-slate-500">Modo de Foco</h3>
+                <p className={`text-xl font-bold uppercase ${mode === 'focus' ? 'text-cyan-400' : 'text-emerald-400'}`}>
+                  {mode === 'focus' ? 'Protocolo de Invasão' : 'Recarga de Bateria'}
+                </p>
+              </div>
+            </div>
+
+            <div className="text-6xl font-black font-mono tracking-tighter text-white">
+              {formatTime(secondsLeft)}
+            </div>
+
+            <div className="flex gap-2 w-full md:w-auto">
+              <button 
+                onClick={toggleTimer}
+                className={`flex-1 md:flex-none px-8 py-3 rounded font-bold uppercase transition-all ${
+                  timerActive 
+                  ? 'bg-slate-800 text-slate-400 border border-slate-700' 
+                  : 'bg-cyan-600 hover:bg-cyan-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                }`}
+              >
+                {timerActive ? 'Pausar' : 'Iniciar'}
+              </button>
+              <button 
+                onClick={resetTimer}
+                className="px-4 py-3 bg-slate-800 text-slate-400 hover:text-white rounded transition-colors"
+              >
+                Reset
+              </button>
+            </div>
           </div>
         </section>
 
@@ -312,6 +433,45 @@ const LogbookRPG = () => {
             </div>
           </div>
         </main>
+
+        {/* --- CONSISTENCY HEATMAP (ESTILO GITHUB) --- */}
+        <section className="bg-slate-900/50 border border-slate-800 p-6 rounded-lg mt-8">
+          <h3 className="text-xs uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+            <Terminal className="w-4 h-4" />
+            Mapa de Calor de Produtividade (Últimas 12 Semanas)
+          </h3>
+          
+          <div className="flex flex-wrap gap-1.5 justify-center md:justify-start">
+            {getHeatmapData().map((day, index) => {
+              // Lógica de cores baseada no XP do dia
+              let colorClass = "bg-slate-800"; // Zero XP
+              if (day.count > 0 && day.count < 50) colorClass = "bg-green-900 opacity-40";
+              if (day.count >= 50 && day.count < 100) colorClass = "bg-green-700 opacity-70";
+              if (day.count >= 100 && day.count < 150) colorClass = "bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.4)]";
+              if (day.count >= 150) colorClass = "bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.6)] animate-pulse";
+
+              return (
+                <div 
+                  key={index}
+                  title={`${day.date}: ${day.count} XP`}
+                  className={`w-3 h-3 md:w-4 md:h-4 rounded-sm transition-all hover:scale-125 hover:z-10 cursor-pointer ${colorClass}`}
+                />
+              );
+            })}
+          </div>
+          
+          <div className="flex justify-between items-center mt-4 text-[10px] text-slate-600 uppercase tracking-tighter">
+            <span>Menos XP</span>
+            <div className="flex gap-1">
+              <div className="w-2 h-2 bg-slate-800 rounded-sm"></div>
+              <div className="w-2 h-2 bg-green-900 opacity-40 rounded-sm"></div>
+              <div className="w-2 h-2 bg-green-700 opacity-70 rounded-sm"></div>
+              <div className="w-2 h-2 bg-green-500 rounded-sm"></div>
+              <div className="w-2 h-2 bg-green-400 rounded-sm"></div>
+            </div>
+            <span>Mais XP</span>
+          </div>
+        </section>
 
         {/* --- FOOTER CONTROLS --- */}
         <footer className="pt-10 flex justify-center pb-8">
